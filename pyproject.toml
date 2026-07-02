@@ -1,0 +1,29 @@
+[build-system]
+  requires = ["setuptools>=68", "wheel"]
+  build-backend = "setuptools.build_meta"
+
+  [project]
+  name = "smpl-diffusion-lab"
+  version = "0.1.0"
+  description = "From-scratch learning project for 3D human pose estimation, SMPL, and diffusion models."
+  readme = "README.md"
+  requires-python = ">=3.10"
+  license = { text = "MIT" }
+  authors = [
+    { name = "Nyac0de" }
+  ]
+  dependencies = [
+    "numpy>=1.24",
+  ]
+
+  [project.optional-dependencies]
+  dev = [
+    "pytest>=8.0",
+  ]
+
+  [tool.setuptools.packages.find]
+  where = ["src"]
+
+  [tool.pytest.ini_options]
+  testpaths = ["tests"]
+  pythonpath = ["src"]
