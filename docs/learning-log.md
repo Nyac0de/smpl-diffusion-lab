@@ -154,6 +154,13 @@
 
 #### 下一步
 
+
+ ## 2026-07-10
+
+  - 练习 PyTorch 版扩散反向过程实现。
+  - 学习 `torch.cat`、tensor 切片 `[:-1]`、`alpha_bars_prev` 的构造方式。
+  - 调试 `tests/test_torch_reverse.py`，修正 tensor 写法和反向采样相关测试。
+
 1.
 
 保存文件。

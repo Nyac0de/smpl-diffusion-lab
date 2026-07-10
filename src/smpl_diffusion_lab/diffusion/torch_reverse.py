@@ -74,3 +74,36 @@ def predict_previous_mean_from_noise(
     mean = mean_numerator / torch.sqrt(alphas_t)
 
     return mean
+
+
+def make_posterior_variances_torch(
+        schedule: DiffusionSchedule,
+        *,
+        dtype: torch.dtype = torch.float32,
+        device: torch.device | str = "cpu",
+) -> torch.Tensor:
+    """Compute posterior variance for all timesteps"""
+    betas = torch.as_tensor(
+        schedule.betas,
+        dtype=dtype,
+        device=device,
+    )
+
+    alphas = torch.as_tensor(
+        schedule.alphas,
+        dtype=dtype,
+        device=device,
+    )
+
+    alpha_bars = torch.as_tensor(
+        schedule.alpha_bars,
+        dtype=dtype,
+        device=device,
+    )
+
+    alpha_bars_previous = torch.cat(
+        [
+            torch.ones(1, dtype=dtype, device=device),
+            alpha_bars[:-1],
+        ]
+    )

@@ -3,6 +3,7 @@ import torch
 from smpl_diffusion_lab.diffusion.schedule import make_linear_schedule
 from smpl_diffusion_lab.diffusion.torch_forward import q_sample_torch
 from smpl_diffusion_lab.diffusion.torch_reverse import (
+    make_posterior_variances_torch,
     predict_previous_mean_from_noise,
     predict_x0_from_noise,
 )
@@ -67,3 +68,21 @@ def test_reverse_mean_recovers_x0_at_timestep_zero():
     )
 
     torch.testing.assert_close(mean, x0)
+
+
+def test_make_posterior_variances_torch_values():
+    schedule = make_linear_schedule(4, 0.1, 0.4)
+
+    posterior_variances = make_posterior_variances_torch(schedule)
+
+    expected = torch.tensor(
+        [
+            0.0,
+            0.07142857,
+            0.16935484,
+            0.28440368,
+        ],
+        dtype=torch.float32
+    )
+
+    torch.testing.assert_close(posterior_variance, expected)
