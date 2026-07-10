@@ -159,3 +159,6 @@
 保存文件。
 
 ---
+
+--以后重新 clone 仓库：需要再次执行一次：
+git config core.hooksPath .githooks
