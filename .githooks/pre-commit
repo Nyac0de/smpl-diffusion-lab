@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+learning_log="docs/learning-log.md"
+
+if ! git diff --cached --name-only --diff-filter=ACMR \
+| grep -Fxq "$learning_log"; then
+printf '%s\n' \
+"提交被取消：本次提交尚未包含 $learning_log。" \
+"" \
+"请先根据真实学习情况更新日志，然后执行：" \
+"git add $learning_log" \
+"git commit" \
+"" \
+"学习日志必须人工填写，hook 不会自动生成学习内容。"
+exit 1
+fi
+
+printf '%s\n' "学习日志检查通过：$learning_log 已包含在本次提交中。"
