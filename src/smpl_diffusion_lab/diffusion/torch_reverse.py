@@ -89,12 +89,6 @@ def make_posterior_variances_torch(
         device=device,
     )
 
-    alphas = torch.as_tensor(
-        schedule.alphas,
-        dtype=dtype,
-        device=device,
-    )
-
     alpha_bars = torch.as_tensor(
         schedule.alpha_bars,
         dtype=dtype,
@@ -107,3 +101,51 @@ def make_posterior_variances_torch(
             alpha_bars[:-1],
         ]
     )
+
+    posterior_variances = (
+        betas
+        * (1.0 - alpha_bars_previous)
+        / (1.0 - alpha_bars)
+    )
+
+    return posterior_variances
+
+
+def p_sample_torch(
+    xt: torch.Tensor,
+    timesteps: torch.Tensor,
+    noise_pred: torch.Tensor,
+    sampling_noise: torch.Tensor,
+    schedule: DiffusionSchedule,
+) -> torch.Tensor:
+    """Sample x_{t-1} from x_t"""
+    if xt.shape != noise_pred.shape:
+        raise ValueError("xt and noise_pred must have the same shape")
+    if xt.shape != sampling_noise.shape:
+        raise ValueError("xt and sampling_noise must have the same shape")
+
+    mean = predict_previous_mean_from_noise(
+        xt=xt,
+        timesteps=timesteps,
+        noise_pred=noise_pred,
+        schedule=schedule,
+    )
+
+    posterior_variances = make_posterior_variances_torch(
+        schedule=schedule,
+        dtype=xt.dtype,
+        device=xt.device,
+    )
+    posterior_variances_t = posterior_variances[timesteps]
+
+    broadcast_shape = (timesteps.shape[0],) + (1,) * (xt.ndim - 1)
+    posterior_variances_t = posterior_variances_t.reshape(
+        broadcast_shape
+    )
+
+    nonzero_mask = (timesteps != 0).to(dtype=xt.dtype)
+    nonzero_mask = nonzero_mask.reshape(broadcast_shape)
+
+    x_previous = mean + nonzero_mask * torch.sqrt(posterior_variances_t) * sampling_noise
+
+    return x_previous

@@ -36,8 +36,8 @@
 - [x] 实现 forward diffusion：`q_sample_torch`
 - [x] 根据预测噪声恢复 `x0`
 - [x] 计算反向分布均值
-- [ ] 计算 posterior variance
-- [ ] 实现单步反向采样 `x_t -> x_{t-1}`
+- [x] 计算 posterior variance
+- [x] 实现单步反向采样 `x_t -> x_{t-1}`
 - [ ] 实现完整反向采样循环 `x_T -> x_0`
 
 ### Diffusion 模型与训练
@@ -161,9 +161,64 @@
   - 学习 `torch.cat`、tensor 切片 `[:-1]`、`alpha_bars_prev` 的构造方式。
   - 调试 `tests/test_torch_reverse.py`，修正 tensor 写法和反向采样相关测试。
 
-1.
+ ### 2026-07-14：完成 DDPM 单步反向采样
 
-保存文件。
+  #### 本次完成了什么
+
+  - 实现 DDPM posterior variance
+  - 实现单步反向采样 `p_sample_torch`
+  - 使用 `nonzero_mask` 控制最后一步是否加入采样噪声
+  - 为 posterior variance 和单步反向采样添加测试
+  - Reverse 测试全部通过：`4 passed`
+  - 项目全部测试通过：`27 passed`
+
+  #### 本次理解了什么
+
+  - 每个 diffusion 时间步都有一个 posterior variance。
+  - `posterior_variances` 包含全部时间步的方差，shape 是 `(T,)`。
+  - batch 中的不同样本可能位于不同时间步，因此要用 `timesteps`
+    取出每个样本对应的 `posterior_variances_t`。
+  - `posterior_variances_t` 从 `(B,)` reshape 为 `(B, 1, ...)` 后，
+    可以与形状为 `(B, ...)` 的数据按 batch 广播。
+  - `nonzero_mask` 在 `t=0` 时为 0，消去采样噪声项，避免污染最终
+    的干净输出；在 `t>0` 时为 1，允许正常的随机反向采样。
+  - `noise_pred` 是神经网络对 forward noise 的预测，将用于计算反向
+    均值。
+  - `sampling_noise` 是反向采样时新生成的随机噪声，用于从反向高斯
+    分布中取样。
+  - 目前对 `noise_pred` 和 `sampling_noise` 的区别已有初步理解，
+    后续将在训练循环和完整采样循环中继续巩固。
+
+  #### 遇到的问题
+
+  - 在 `torch.cat` 的输入列表中误放入了函数对象，导致
+    `expected Tensor ... but got function`。
+  - 最终公式中误用了包含全部时间步的 `posterior_variances`，
+    导致 shape `(2, 4)` 无法与 `(2, 3)` 相乘。
+  - 一度把 `reshape` 当成可以直接赋值的属性，而不是需要调用的方法。
+  - 对 `noise_pred` 和 `sampling_noise` 的来源及职责产生混淆。
+
+  #### 如何解决
+
+  - 从 traceback 的最后一行确定错误类型，再查看具体出错代码。
+  - 列出参与计算的每个 tensor 的 shape，逐维分析 broadcasting。
+  - 使用 `posterior_variances[timesteps]` 选取当前 batch 对应的方差。
+  - 将当前 timestep 的方差从 `(B,)` reshape 为 `(B, 1, ...)`。
+  - 用训练流程和采样流程分别理解 `noise_pred` 与 `sampling_noise`。
+
+  #### 测试结果
+
+  - 单步反向采样测试：`1 passed`
+  - Reverse 测试：`4 passed`
+  - 全部测试：`27 passed`
+
+  #### 下一步
+
+  1. 提交当前单步反向采样实现
+  2. 创建二维 toy dataset
+  3. 学习 `torch.nn.Module`
+  4. 实现最小 MLP 噪声预测器
+  5. 实现第一个 DDPM 训练循环
 
 ---
 
