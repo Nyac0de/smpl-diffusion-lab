@@ -29,9 +29,9 @@ htmlcov/
 Thumbs.db
 
 # Data and checkpoints
-data/
-datasets/
-checkpoints/
-outputs/
-runs/
-wandb/
+/data/
+/datasets/
+/checkpoints/
+/outputs/
+/runs/
+/wandb/
