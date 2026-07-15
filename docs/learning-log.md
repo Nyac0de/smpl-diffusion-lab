@@ -44,7 +44,7 @@
 
 - [x] 创建 toy dataset
 - [ ] 实现 timestep embedding
-- [ ] 实现最小 MLP 噪声预测模型
+- [x] 实现最小 MLP 噪声预测模型
 - [ ] 实现 DDPM 训练 loss
 - [ ] 实现训练循环
 - [ ] 在 toy 数据上完成训练和采样
@@ -293,6 +293,68 @@ x、y 坐标分别获得独立扰动。
 3. 实现最小 MLP 噪声预测器
 4. 让模型接收 `x_t` 和 timestep
 5. 实现 DDPM 噪声预测 loss
+
+
+### 2026-07-15：实现第一个 PyTorch 噪声预测 MLP
+
+  #### 本次完成了什么
+
+  - 实现继承自 `nn.Module` 的 `NoisePredictMLP`
+  - 使用两个隐藏层和 SiLU 激活函数构建 MLP
+  - 将二维带噪点与归一化 timestep 拼接为模型输入
+  - 让模型输出与带噪数据 shape 相同的预测噪声
+  - 添加模型输出 shape、dtype 和有限值测试
+  - 模型测试通过：`1 passed`
+  - 项目全部测试通过：`30 passed`
+
+  #### 本次理解了什么
+
+  - `nn.Module` 是 PyTorch 神经网络模型的基础类。
+  - `__init__` 用来创建并注册网络层，`forward` 用来定义数据通过网络
+    时的计算过程。
+  - 调用 `model(xt, timesteps)` 时，PyTorch 会执行模型的 `forward`。
+  - timestep 原本的 shape 是 `(B,)`，reshape 为 `(B, 1)` 后才能与
+    shape 为 `(B, data_dim)` 的数据沿 feature 维拼接。
+  - 对二维数据，模型输入是 `[x, y, normalized_t]`，因此第一层输入
+    维度为 3；模型预测二维噪声，因此输出维度为 2。
+  - `nn.Linear(in_features=3, out_features=32)` 的权重 shape 是
+    `(32, 3)`，因为 PyTorch 按 `(out_features, in_features)` 保存
+    权重。
+  - batch 维不包含在模型权重中；同一套权重会应用到 batch 中的所有
+    样本。
+  - 对 shape 为 `(B, 72)` 的 pose vector，`data_dim` 应为 72；
+    拼接一个 timestep 后第一层输入维度为 73，输出仍为 72。
+  - 本次一开始将 `data_dim` 和“加入 timestep 后的模型输入维度”
+    混淆，经过 shape 分析后完成区分。
+
+  #### 遇到的问题
+
+  - 模型文件存在，但 class 名称与测试导入名称不一致，导致
+    `ImportError`。
+  - 一开始不清楚 `Linear` 权重为什么使用 `(32, 3)` 而不是
+    `(3, 32)`。
+  - 一开始把 72 维 pose 的 `data_dim` 错认为 73。
+
+  #### 如何解决
+
+  - 检查 class 定义与测试 import 的名称是否完全一致。
+  - 打印 `model.named_parameters()`，观察每层权重和偏置的 shape。
+  - 使用矩阵乘法 shape：
+    `(B, 3) @ (3, 32) -> (B, 32)` 理解 Linear 层。
+  - 区分原始数据维度 `data_dim` 和拼接 timestep 后的模型输入维度。
+
+  #### 测试结果
+
+  - Noise MLP 测试：`1 passed`
+  - 全部测试：`30 passed`
+
+  #### 下一步
+
+  1. 实现 DDPM 噪声预测 loss
+  2. 学习 MSE loss
+  3. 学习梯度、`backward()` 和参数的 `.grad`
+  4. 实现一个 optimizer step
+  5. 将单步训练扩展为完整训练循环
 
 --以后重新 clone 仓库：需要再次执行一次：
 git config core.hooksPath .githooks
