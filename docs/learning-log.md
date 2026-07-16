@@ -356,5 +356,69 @@ x、y 坐标分别获得独立扰动。
   4. 实现一个 optimizer step
   5. 将单步训练扩展为完整训练循环
 
+
+### 2026-07-16：完成 DDPM 噪声预测 loss 和反向传播
+
+  #### 本次完成了什么
+
+  - 实现 `noise_prediction_loss`
+  - 使用 `q_sample_torch` 根据 `x0`、timestep 和真实噪声生成 `xt`
+  - 将 `xt` 和 timestep 输入噪声预测 MLP
+  - 使用 MSE 比较 `noise_pred` 与真实 `noise`
+  - 调用 `loss.backward()` 为模型参数计算梯度
+  - 添加测试，验证 loss 使用的是带噪输入 `xt`
+  - 添加测试，验证所有模型参数都获得形状正确且数值有限的梯度
+  - Loss/gradient 测试通过：`2 passed`
+  - 项目全部测试通过：`32 passed`
+
+  #### 本次理解了什么
+
+  - `noise` 是 forward diffusion 中主动生成的已知噪声，也是训练监督目标。
+  - `noise_pred` 来自神经网络，是模型对真实噪声的预测。
+  - 模型必须接收 `xt` 而不是 `x0`，因为实际生成阶段没有干净的 `x0`
+    可以作为输入。
+  - 默认的 `F.mse_loss` 会计算所有对应元素的平方误差并取平均，
+    因此返回标量 tensor。
+  - 对 shape 为 `(32, 2)` 的预测和目标，默认 MSE 会对全部 64 个元素
+    的平方误差取平均。
+  - `loss.backward()` 负责计算梯度，但不会直接修改模型参数。
+  - `optimizer.step()` 才会利用梯度更新模型参数。
+  - 每个参数元素都有对应梯度，因此 `parameter.grad.shape` 应与
+    `parameter.shape` 相同。
+  - `parameter.grad is None` 表示尚未计算出梯度；梯度 tensor 全为 0
+    表示梯度存在，但当前梯度值为零。
+
+  #### 遇到的问题
+
+  - 终端从 `smpldiff` 环境切换到了 `base`，导致找不到 pytest。
+  - 将 `functional` 拼错为 `funticonal`，导致 `ImportError`。
+  - 使用大写 `torch.Tensor` 从列表创建数据并传入 `dtype`，导致
+    `TypeError`。
+  - 测试中使用了尚未定义的 `noise`，导致 `NameError`。
+  - 一开始将 MSE 称为“均值方差”，后来明确其含义是“均方误差”。
+
+  #### 如何解决
+
+  - 通过终端提示符和 `which python` 确认当前 Conda 环境。
+  - 区分 `py_compile` 的语法检查和 pytest 的运行时行为检查。
+  - 从 Python 列表创建 tensor 时使用小写 `torch.tensor`。
+  - 根据 traceback 定位未定义变量和拼写错误。
+  - 在 backward 前后检查每个参数的 `.grad`。
+  - 检查梯度 shape 与参数 shape 一致，并用 `torch.isfinite` 检查
+    梯度中没有 NaN 或无穷值。
+
+  #### 测试结果
+
+  - Noise prediction loss 与梯度测试：`2 passed`
+  - 全部测试：`32 passed`
+
+  #### 下一步
+
+  1. 创建 Adam optimizer
+  2. 学习 `optimizer.zero_grad()`
+  3. 学习梯度累积
+  4. 使用 `optimizer.step()` 更新模型参数
+  5. 验证一次训练步骤确实改变了参数
+  6. 将单步训练扩展为完整训练循环
 --以后重新 clone 仓库：需要再次执行一次：
 git config core.hooksPath .githooks
