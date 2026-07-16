@@ -420,5 +420,67 @@ x、y 坐标分别获得独立扰动。
   4. 使用 `optimizer.step()` 更新模型参数
   5. 验证一次训练步骤确实改变了参数
   6. 将单步训练扩展为完整训练循环
+
+
+   ### 2026-07-16：验证 optimizer 更新模型参数
+
+  #### 本次完成了什么
+
+  - 创建 Adam optimizer
+  - 按照 `zero_grad -> loss -> backward -> step` 的顺序完成一次参数更新
+  - 使用参数快照比较 optimizer step 前后的模型参数
+  - 添加测试，验证至少一个模型参数在 optimizer step 后发生变化
+  - Optimizer 单项测试通过：`1 passed`
+  - Loss 和训练步骤测试通过：`3 passed`
+  - 项目全部测试通过：`33 passed`
+
+  #### 本次理解了什么
+
+  - `loss.backward()` 负责计算梯度，并将结果保存到模型参数的
+    `parameter.grad` 中。
+  - `optimizer.step()` 不直接接收 loss，而是读取每个参数的 `.grad`
+    并据此更新参数。
+  - 对一个没有梯度的新模型，如果不调用 `backward()`，optimizer
+    通常没有可用于更新参数的信息。
+  - `loss.backward()` 本身不会修改模型参数，真正修改参数的是
+    `optimizer.step()`。
+  - PyTorch 默认会累积梯度，所以普通训练步骤开始时需要调用
+    `optimizer.zero_grad()`。
+  - `parameters_before = list(model.parameters())` 只保存参数对象的引用，
+    不能作为独立的更新前快照。
+  - `clone()` 创建独立的数值副本，使更新前后的参数可以进行比较。
+  - `detach()` 让保存的参数快照不再参与自动求导计算图。
+
+  #### 遇到的问题
+
+  - 一开始不确定 optimizer 是否直接需要 loss 作为输入。
+  - 一开始不清楚 optimizer 和 loss 如何通过梯度联系起来。
+  - 需要区分“参数对象的引用”和“参数数值的独立副本”。
+
+  #### 如何解决
+
+  - 检查 `loss.backward()` 前后的 `parameter.grad`。
+  - 明确训练步骤中每个操作的职责：
+    `zero_grad` 清除旧梯度，`backward` 计算新梯度，`step` 更新参数。
+  - 使用 `parameter.detach().clone()` 保存更新前的独立参数快照。
+  - 使用 `torch.equal` 比较 optimizer step 前后的参数值。
+
+  #### 测试结果
+
+  - Optimizer 参数更新测试：`1 passed`
+  - Noise prediction loss 与训练步骤测试：`3 passed`
+  - 全部测试：`33 passed`
+
+  #### 下一步
+
+  1. 将单个 optimizer step 扩展为完整训练循环
+  2. 每轮随机生成一批二维 toy data
+  3. 每轮随机生成 timestep 和真实 noise
+  4. 观察训练 loss 的变化
+  5. 保存训练后的模型 checkpoint
+  6. 实现从纯噪声开始的完整采样循环
+
+
+
 --以后重新 clone 仓库：需要再次执行一次：
 git config core.hooksPath .githooks

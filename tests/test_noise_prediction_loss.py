@@ -109,3 +109,61 @@ def test_noise_prediction_loss_computes_model_gradients():
         torch.isfinite(parameter.grad).all()
         for parameter in parameters
     )
+
+
+def test_optimizer_step_updates_model_parameters():
+    schedule = make_linear_schedule(4, 0.1, 0.4)
+
+    model = NoisePredictMLP(
+        data_dim=2,
+        hidden_dim=16,
+        num_timesteps=4,
+    )
+    optimizer = torch.optim.Adam(
+        model.parameters(),
+        lr=1e-3,
+    )
+
+    x0 = torch.tensor(
+        [
+            [0.1, -0.2],
+            [-0.1, 0.5],
+        ],
+        dtype=torch.float32,
+    )
+    noise = torch.tensor(
+        [
+            [0.1, -0.2],
+            [0.4, 0.0],
+        ],
+        dtype=torch.float32,
+    )
+    timesteps = torch.tensor([0, 3], dtype=torch.long)
+
+    parameters_before = [
+        parameter.detach().clone()
+        for parameter in model.parameters()
+    ]
+
+    optimizer.zero_grad()
+
+    loss = noise_prediction_loss(
+        model=model,
+        x0=x0,
+        timesteps=timesteps,
+        noise=noise,
+        schedule=schedule,
+    )
+
+    loss.backward()
+    optimizer.step()
+
+    parameters_after = list(model.parameters())
+
+    assert any(
+        not torch.equal(before, after)
+        for before, after in zip(
+            parameters_before,
+            parameters_after,
+        )
+    )
