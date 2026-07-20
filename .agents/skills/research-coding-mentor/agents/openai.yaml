@@ -1,0 +1,7 @@
+interface:
+  display_name: "Research Coding Mentor"
+  short_description: "Resume and guide portable AI coding practice"
+  default_prompt: "Use $research-coding-mentor to synchronize repository-backed learning state and continue my research coding practice with staged hints and verification."
+
+policy:
+  allow_implicit_invocation: true

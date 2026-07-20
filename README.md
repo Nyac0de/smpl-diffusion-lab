@@ -36,3 +36,9 @@ smpl-diffusion-lab
 
 - DiffPose: https://github.com/gongjia0208/diffpose
 - DiffPose paper: https://arxiv.org/abs/2211.16940
+
+## Portable Mentoring Workflow
+
+The repository includes the project-local `$research-coding-mentor` skill. Its concise handoff state lives in `docs/mentoring-state.md`, while detailed evidence remains in `docs/learning-log.md`.
+
+Use `$research-coding-mentor 继续学习` after opening the repository on either machine. Use `$research-coding-mentor 结束并同步` at a stopping point to update, validate, commit, and push the handoff after approval. Git network access and authentication are required for cross-machine synchronization.
